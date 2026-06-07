@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cron Expression Validator & Explainer</title>
+<meta name="description" content="Free online cron expression validator. Validate, explain in plain English, and preview next execution times for any cron schedule.">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c27;
+    --border: #2a2a3d;
+    --accent: #7c6aff;
+    --accent2: #ff6a9e;
+    --accent3: #6affda;
+    --text: #e8e8f0;
+    --text-muted: #6b6b8a;
+    --success: #6affda;
+    --error: #ff6a6a;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(124,106,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,106,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+    position: relative;
+    z-index: 1;
+  }
+  header { text-align: center; margin-bottom: 48px; }
+  .badge {
+    display: inline-block;
+    background: rgba(124,106,255,0.15);
+    border: 1px solid rgba(124,106,255,0.3);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-bottom: 16px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  h1 {
+    font-size: clamp(28px, 5vw, 48px);
+    font-weight: 800;
+    line-height: 1.1;
+    background: linear-gradient(135deg, #fff 0%, var(--accent) 60%, var(--accent2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 12px;
+  }
+  .subtitle { color: var(--text-muted); font-size: 15px; font-family: var(--mono); }
+  .lang-toggle { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 24px; }
+  .lang-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .lang-btn.active { background: rgba(124,106,255,0.2); border-color: var(--accent); color: var(--accent); }
+  .input-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 24px;
+  }
+  .field-label { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted); margin-bottom: 10px; }
+  .cron-input-wrap { display: flex; gap: 10px; }
+  .cron-input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 20px;
+    padding: 14px 18px;
+    outline: none;
+    transition: border-color 0.2s;
+    letter-spacing: 0.05em;
+  }
+  .cron-input:focus { border-color: var(--accent); }
+  .cron-input.valid { border-color: var(--success); }
+  .cron-input.invalid { border-color: var(--error); }
+  .validate-btn {
+    background: var(--accent);
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 14px;
+    padding: 14px 24px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .validate-btn:hover { background: #9580ff; transform: translateY(-1px); }
+  .presets { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .preset-chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .preset-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .diagram-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px 28px;
+    margin-bottom: 24px;
+  }
+  .diagram-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted); font-family: var(--mono); margin-bottom: 16px; }
+  .cron-fields { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .cron-field {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 8px;
+    text-align: center;
+    transition: all 0.3s;
+  }
+  .cron-field.active { border-color: var(--accent); background: rgba(124,106,255,0.1); }
+  .field-value { font-family: var(--mono); font-size: 20px; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
+  .field-name { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); }
+  .results { display: grid; gap: 16px; }
+  .result-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px 28px; }
+  .result-card.valid-card { border-color: rgba(106,255,218,0.3); }
+  .result-card.error-card { border-color: rgba(255,106,106,0.3); }
+  .result-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .status-dot.valid { background: var(--success); box-shadow: 0 0 8px var(--success); }
+  .status-dot.invalid { background: var(--error); box-shadow: 0 0 8px var(--error); }
+  .result-title { font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; font-family: var(--mono); color: var(--text-muted); }
+  .natural-text { font-size: 22px; font-weight: 700; color: var(--text); line-height: 1.3; }
+  .schedule-list { display: grid; gap: 8px; }
+  .schedule-item { display: flex; align-items: center; gap: 14px; padding: 10px 14px; background: var(--surface2); border-radius: 8px; font-family: var(--mono); font-size: 13px; }
+  .schedule-index { color: var(--text-muted); font-size: 11px; width: 20px; flex-shrink: 0; }
+  .schedule-date { color: var(--accent3); flex: 1; }
+  .schedule-relative { color: var(--text-muted); font-size: 11px; }
+  .ad-slot {
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    color: var(--text-muted);
+    font-family: var(--mono);
+    font-size: 11px;
+    margin: 24px 0;
+    opacity: 0.5;
+  }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('en')" id="btn-en">EN</button>
+    <button class="lang-btn" onclick="setLang('pt')" id="btn-pt">PT</button>
+    <button class="lang-btn" onclick="setLang('nl')" id="btn-nl">NL</button>
+  </div>
+
+  <header>
+    <div class="badge" id="badge-text">Cron Utility Tool</div>
+    <h1 id="h1-text">Cron Expression<br>Validator</h1>
+    <p class="subtitle" id="subtitle-text">Validate, explain & preview your cron schedules</p>
+  </header>
+
+  <div class="input-card">
+    <div class="field-label" id="label-input">Cron Expression</div>
+    <div class="cron-input-wrap">
+      <input class="cron-input" id="cronInput" type="text" placeholder="* * * * *" value="0 9 * * MON-FRI" spellcheck="false">
+      <button class="validate-btn" id="validateBtn" onclick="validate()">Validate</button>
+    </div>
+    <div class="presets" id="presets-wrap"></div>
+  </div>
+
+  <!-- AdSense top -->
+  <div class="ad-slot">[ Google AdSense — replace with your ad unit ]</div>
+
+  <div class="diagram-card">
+    <div class="diagram-title" id="label-diagram">Field Reference</div>
+    <div class="cron-fields" id="cronFields">
+      <div class="cron-field active" id="f0"><div class="field-value" id="fv0">*</div><div class="field-name" id="fn0">Minute</div></div>
+      <div class="cron-field active" id="f1"><div class="field-value" id="fv1">*</div><div class="field-name" id="fn1">Hour</div></div>
+      <div class="cron-field active" id="f2"><div class="field-value" id="fv2">*</div><div class="field-name" id="fn2">Day (Month)</div></div>
+      <div class="cron-field active" id="f3"><div class="field-value" id="fv3">*</div><div class="field-name" id="fn3">Month</div></div>
+      <div class="cron-field active" id="f4"><div class="field-value" id="fv4">*</div><div class="field-name" id="fn4">Day (Week)</div></div>
+    </div>
+  </div>
+
+  <div class="results hidden" id="results">
+    <div class="result-card" id="explanationCard">
+      <div class="result-header">
+        <div class="status-dot" id="statusDot"></div>
+        <div class="result-title" id="label-explanation">Human Explanation</div>
+      </div>
+      <div class="natural-text" id="naturalText"></div>
+    </div>
+
+    <div class="result-card hidden" id="scheduleCard">
+      <div class="result-header">
+        <div class="status-dot valid"></div>
+        <div class="result-title" id="label-next">Next Executions</div>
+      </div>
+      <div class="schedule-list" id="scheduleList"></div>
+    </div>
+  </div>
+
+  <!-- AdSense bottom -->
+  <div class="ad-slot">[ Google AdSense — replace with your ad unit ]</div>
+
+</div>
+
+<script>
+const i18n = {
+  en: {
+    badge: 'Cron Utility Tool',
+    h1: 'Cron Expression<br>Validator',
+    subtitle: 'Validate, explain & preview your cron schedules',
+    labelInput: 'Cron Expression',
+    validateBtn: 'Validate',
+    labelDiagram: 'Field Reference',
+    labelExplanation: 'Human Explanation',
+    labelNext: 'Next 10 Executions',
+    fieldNames: ['Minute', 'Hour', 'Day (Month)', 'Month', 'Day (Week)'],
+    presets: [
+      { label: 'Every minute', value: '* * * * *' },
+      { label: 'Every hour', value: '0 * * * *' },
+      { label: 'Daily midnight', value: '0 0 * * *' },
+      { label: 'Weekdays 9am', value: '0 9 * * MON-FRI' },
+      { label: 'Every Sunday', value: '0 0 * * SUN' },
+      { label: 'First of month', value: '0 0 1 * *' },
+    ],
+  },
+  pt: {
+    badge: 'Ferramenta Cron',
+    h1: 'Validador de<br>Expressão Cron',
+    subtitle: 'Valide, explique e visualize seus schedules cron',
+    labelInput: 'Expressão Cron',
+    validateBtn: 'Validar',
+    labelDiagram: 'Referência de Campos',
+    labelExplanation: 'Explicação em Português',
+    labelNext: 'Próximas 10 Execuções',
+    fieldNames: ['Minuto', 'Hora', 'Dia (Mês)', 'Mês', 'Dia (Semana)'],
+    presets: [
+      { label: 'Todo minuto', value: '* * * * *' },
+      { label: 'Toda hora', value: '0 * * * *' },
+      { label: 'Diário meia-noite', value: '0 0 * * *' },
+      { label: 'Dias úteis 9h', value: '0 9 * * MON-FRI' },
+      { label: 'Todo domingo', value: '0 0 * * SUN' },
+      { label: 'Primeiro do mês', value: '0 0 1 * *' },
+    ],
+  },
+  nl: {
+    badge: 'Cron Hulpmiddel',
+    h1: 'Cron Expressie<br>Validator',
+    subtitle: "Valideer, leg uit & bekijk je cron schema's",
+    labelInput: 'Cron Expressie',
+    validateBtn: 'Valideren',
+    labelDiagram: 'Velden Referentie',
+    labelExplanation: 'Uitleg in het Nederlands',
+    labelNext: 'Volgende 10 Uitvoeringen',
+    fieldNames: ['Minuut', 'Uur', 'Dag (Maand)', 'Maand', 'Dag (Week)'],
+    presets: [
+      { label: 'Elke minuut', value: '* * * * *' },
+      { label: 'Elk uur', value: '0 * * * *' },
+      { label: 'Dagelijks middernacht', value: '0 0 * * *' },
+      { label: 'Werkdagen 9u', value: '0 9 * * MON-FRI' },
+      { label: 'Elke zondag', value: '0 0 * * SUN' },
+      { label: 'Eerste van de maand', value: '0 0 1 * *' },
+    ],
+  }
+};
+
+const DAYS_EN = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const DAYS_PT = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+const DAYS_NL = ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'];
+const MONTHS_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTHS_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const MONTHS_NL = ['Januari','Februari','Maart','April','Mei','Juni','Juli','Augustus','September','Oktober','November','December'];
+
+const dayNameMap = { SUN:0,MON:1,TUE:2,WED:3,THU:4,FRI:5,SAT:6,SUNDAY:0,MONDAY:1,TUESDAY:2,WEDNESDAY:3,THURSDAY:4,FRIDAY:5,SATURDAY:6 };
+const monthNameMap = { JAN:1,FEB:2,MAR:3,APR:4,MAY:5,JUN:6,JUL:7,AUG:8,SEP:9,OCT:10,NOV:11,DEC:12 };
+
+let currentLang = 'en';
+
+function setLang(lang) {
+  currentLang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-' + lang).classList.add('active');
+  applyLang();
+  validate();
+}
+
+function applyLang() {
+  const t = i18n[currentLang];
+  document.getElementById('badge-text').textContent = t.badge;
+  document.getElementById('h1-text').innerHTML = t.h1;
+  document.getElementById('subtitle-text').textContent = t.subtitle;
+  document.getElementById('label-input').textContent = t.labelInput;
+  document.getElementById('validateBtn').textContent = t.validateBtn;
+  document.getElementById('label-diagram').textContent = t.labelDiagram;
+  document.getElementById('label-explanation').textContent = t.labelExplanation;
+  document.getElementById('label-next').textContent = t.labelNext;
+  t.fieldNames.forEach((n, i) => document.getElementById('fn' + i).textContent = n);
+  const wrap = document.getElementById('presets-wrap');
+  wrap.innerHTML = '';
+  t.presets.forEach(p => {
+    const chip = document.createElement('button');
+    chip.className = 'preset-chip';
+    chip.textContent = p.label;
+    chip.onclick = () => { document.getElementById('cronInput').value = p.value; validate(); };
+    wrap.appendChild(chip);
+  });
+}
+
+function resolveNameOrNum(v, nameMap) {
+  const up = v.toUpperCase();
+  return nameMap && nameMap[up] !== undefined ? nameMap[up] : parseInt(v);
+}
+
+function parseField(val, min, max, nameMap) {
+  if (val === '*') return null;
+  const values = new Set();
+  for (const part of val.split(',')) {
+    if (part.includes('/')) {
+      const [range, step] = part.split('/');
+      const s = parseInt(step);
+      const [lo, hi] = range === '*' ? [min, max] : range.split('-').map(v => resolveNameOrNum(v, nameMap));
+      for (let i = lo; i <= hi; i += s) values.add(i);
+    } else if (part.includes('-')) {
+      const [lo, hi] = part.split('-').map(v => resolveNameOrNum(v, nameMap));
+      for (let i = lo; i <= hi; i++) values.add(i);
+    } else {
+      values.add(resolveNameOrNum(part, nameMap));
+    }
+  }
+  return values;
+}
+
+function parseCron(expr) {
+  const parts = expr.trim().split(/\s+/);
+  if (parts.length !== 5) throw new Error('Cron must have exactly 5 fields (got ' + parts.length + ')');
+  const [minStr, hrStr, domStr, monStr, dowStr] = parts;
+  const minute = parseField(minStr, 0, 59, null);
+  const hour   = parseField(hrStr,  0, 23, null);
+  const dom    = parseField(domStr, 1, 31, null);
+  const month  = parseField(monStr, 1, 12, monthNameMap);
+  const dow    = parseField(dowStr, 0,  6, dayNameMap);
+  if (minute) minute.forEach(v => { if (v < 0 || v > 59) throw new Error('Minute out of range: ' + v); });
+  if (hour)   hour.forEach(v   => { if (v < 0 || v > 23) throw new Error('Hour out of range: ' + v); });
+  if (dom)    dom.forEach(v    => { if (v < 1 || v > 31) throw new Error('Day-of-month out of range: ' + v); });
+  if (month)  month.forEach(v  => { if (v < 1 || v > 12) throw new Error('Month out of range: ' + v); });
+  if (dow)    dow.forEach(v    => { if (v < 0 || v > 6)  throw new Error('Day-of-week out of range: ' + v); });
+  return { parts, minute, hour, dom, month, dow };
+}
+
+function nextExecutions(cronObj, count) {
+  const dates = [];
+  const now = new Date();
+  now.setSeconds(0, 0);
+  now.setMinutes(now.getMinutes() + 1);
+  let d = new Date(now);
+  let iter = 0;
+  while (dates.length < count && iter < 500000) {
+    iter++;
+    if (cronObj.month && !cronObj.month.has(d.getMonth() + 1)) {
+      d.setMonth(d.getMonth() + 1, 1); d.setHours(0,0,0,0); continue;
+    }
+    const domMatch = !cronObj.dom || cronObj.dom.has(d.getDate());
+    const dowMatch = !cronObj.dow || cronObj.dow.has(d.getDay());
+    if (cronObj.dom && cronObj.dow) {
+      if (!domMatch && !dowMatch) { d.setDate(d.getDate() + 1); d.setHours(0,0,0,0); continue; }
+    } else {
+      if (!domMatch || !dowMatch) { d.setDate(d.getDate() + 1); d.setHours(0,0,0,0); continue; }
+    }
+    if (cronObj.hour && !cronObj.hour.has(d.getHours())) {
+      d.setHours(d.getHours() + 1, 0, 0, 0); continue;
+    }
+    if (cronObj.minute && !cronObj.minute.has(d.getMinutes())) {
+      d.setMinutes(d.getMinutes() + 1, 0, 0); continue;
+    }
+    dates.push(new Date(d));
+    d.setMinutes(d.getMinutes() + 1, 0, 0);
+  }
+  return dates;
+}
+
+function explainCron(cronObj, lang) {
+  const { parts, minute, hour, dom, month, dow } = cronObj;
+  const days_   = lang === 'pt' ? DAYS_PT   : lang === 'nl' ? DAYS_NL   : DAYS_EN;
+  const months_  = lang === 'pt' ? MONTHS_PT  : lang === 'nl' ? MONTHS_NL  : MONTHS_EN;
+  let result = [];
+
+  if (minute === null && hour === null) {
+    result.push(lang === 'en' ? 'Every minute' : lang === 'pt' ? 'Todo minuto' : 'Elke minuut');
+  } else if (hour !== null && minute !== null) {
+    const timeStr = [...hour].map(h =>
+      [...minute].map(m => `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`).join(', ')
+    ).join(', ');
+    result.push((lang==='en'?'At ':lang==='pt'?'Às ':lang==='nl'?'Om ':'')+timeStr);
+  } else if (hour !== null) {
+    result.push((lang==='en'?'At ':lang==='pt'?'Às ':lang==='nl'?'Om ':'')+[...hour].map(h => `${String(h).padStart(2,'0')}:XX`).join(', '));
+  } else {
+    result.push(lang==='en'?'Every hour':lang==='pt'?'Toda hora':'Elk uur');
+  }
+
+  if (dow !== null) {
+    result.push((lang==='en'?'on ':lang==='pt'?'nas ':lang==='nl'?'op ':'')+[...dow].map(v => days_[v]).join(', '));
+  } else if (dom !== null) {
+    result.push((lang==='en'?'on day ':lang==='pt'?'no dia ':lang==='nl'?'op dag ':'')+[...dom].join(', '));
+  }
+
+  if (month !== null) {
+    result.push((lang==='en'?'in ':lang==='pt'?'em ':lang==='nl'?'in ':'')+[...month].map(v => months_[v-1]).join(', '));
+  }
+
+  return result.join(' ');
+}
+
+function relativeTime(date) {
+  const mins = Math.round((date - new Date()) / 60000);
+  if (mins < 60) return 'in ' + mins + 'm';
+  if (mins < 1440) return 'in ' + Math.round(mins/60) + 'h';
+  return 'in ' + Math.round(mins/1440) + 'd';
+}
+
+function validate() {
+  const expr = document.getElementById('cronInput').value.trim();
+  const input = document.getElementById('cronInput');
+  const results = document.getElementById('results');
+  const explanationCard = document.getElementById('explanationCard');
+  const scheduleCard = document.getElementById('scheduleCard');
+  const naturalText = document.getElementById('naturalText');
+  const scheduleList = document.getElementById('scheduleList');
+  const statusDot = document.getElementById('statusDot');
+
+  const fieldParts = expr.split(/\s+/);
+  for (let i = 0; i < 5; i++) {
+    const v = fieldParts[i] || '·';
+    document.getElementById('fv' + i).textContent = v;
+    document.getElementById('f' + i).classList.toggle('active', !!fieldParts[i]);
+  }
+
+  try {
+    const cronObj = parseCron(expr);
+    input.className = 'cron-input valid';
+    results.classList.remove('hidden');
+    explanationCard.className = 'result-card valid-card';
+    statusDot.className = 'status-dot valid';
+    naturalText.textContent = explainCron(cronObj, currentLang);
+
+    const nexts = nextExecutions(cronObj, 10);
+    scheduleCard.classList.remove('hidden');
+    scheduleList.innerHTML = '';
+    nexts.forEach((d, i) => {
+      const item = document.createElement('div');
+      item.className = 'schedule-item';
+      item.innerHTML =
+        '<span class="schedule-index">#' + (i+1) + '</span>' +
+        '<span class="schedule-date">' + d.toLocaleString('en-GB', {weekday:'short',year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) + '</span>' +
+        '<span class="schedule-relative">' + relativeTime(d) + '</span>';
+      scheduleList.appendChild(item);
+    });
+  } catch(e) {
+    input.className = 'cron-input invalid';
+    results.classList.remove('hidden');
+    explanationCard.className = 'result-card error-card';
+    statusDot.className = 'status-dot invalid';
+    naturalText.innerHTML = '<span style="color:var(--error);font-size:15px;">⚠ ' + e.message + '</span>';
+    scheduleCard.classList.add('hidden');
+  }
+}
+
+applyLang();
+validate();
+document.getElementById('cronInput').addEventListener('keydown', e => { if (e.key === 'Enter') validate(); });
+document.getElementById('cronInput').addEventListener('input', () => {
+  const p = document.getElementById('cronInput').value.trim().split(/\s+/);
+  for (let i = 0; i < 5; i++) document.getElementById('fv'+i).textContent = p[i] || '·';
+});
+</script>
+</body>
+</html>
